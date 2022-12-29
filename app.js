@@ -1,173 +1,212 @@
 const inquirer = require("inquirer");
-const fs = require("fs");
+
+const Employee = require("./utils/Employee");
 const Engineer = require("./utils/Engineer");
 const Intern = require("./utils/Intern");
 const Manager = require("./utils/Manager");
 
-const employees = [];
+const fs = require("fs");
 
-function initApp() {
-    startHtml ();
-    addMember();
-}
 
-function addMember() {
-    inquirer.createPromptModule([{
-        message: "Please enter team member's name:",
+function runInquirer() {
+    const promptArray = [{
+        type: "input",
+        message: "Please enter your name:",
         name: "name"
-    },
-    {
-        type: "list",
-        message: "Please choose team member's role:",
-        choices: [
-            "Engineer",
-            "Intern",
-            "Manager"
-        ],
-        mame: "role"
-    },
-    {
-        message: "Please enter team member's id:",
+    }, {
+        type: "input",
+        message: "Please enter your ID:",
         name: "id"
-    },
-    {
-        message: "Please enter team member's email address:",
-        name: "email address"
-    }])
-    .then(function({ name, role, id, email}) {
-        let roleInfo = "";
-        if (role === "Engineer") {
-            roleInfo = "GitHub username";
-        } else if (role === "Intern") {
-            roleInfo = "school name";
-        } else {
-            roleInfo = "office phone number";
-        }
-        inquirer.createPromptModule([{
-            message: "Please enter team member's ${roleInfo}",
-            name: "roleInfo"
-        },
-        {
-            type: "list",
-            message: "Are there more team members that you would like to add?",
-            choices: [
-                "yes",
-                "no"
-            ],
-            name: "moreMembers"
-        }])
-        .then(function({roleInfo, moreMembers}) {
-            let newMember;
-            if (role === "Engineer") {
-                newMember = new Engineer(name, id, email, roleInfo);
-            } else if (role === "Intern") {
-                newMember = new Intern(name, id, email, roleInfo);
-            }
-            employees.push(newMember);
-            addHtml(newMember)
-            .then(function() {
-                if (moreMembers === "yes") {
-                    addMember();
-                } else {
-                    finishHtml ();
-                }
-            });
+    }, {
+        type: "input",
+        message: "Please enter your email:",
+        name: "email"
+    }, {
+        type: "list",
+        message: "Please select your title:",
+        choices: ["Manager", "Engineer", "Intern"],
+        name: "title"
+    }];
+
+    return inquirer
+        .prompt(promptArray);
+}
+
+function runInquirerManager() {
+    const promptArray = [{
+        type: "input",
+        message: "What is your office number?",
+        name: "officeNumber"
+    }];
+
+    return inquirer
+        .prompt(promptArray);
+}
+
+function runInquirerEngineer() {
+    const promptArray = [{
+        type: "input",
+        message: "What is your github?",
+        name: "github"
+    }];
+
+    return inquirer
+        .prompt(promptArray);
+}
+
+function runInquirerIntern() {
+    const promptArray = [{
+        type: "input",
+        message: "What school do you attend?",
+        name: "school"
+    }];
+
+    return inquirer
+        .prompt(promptArray);
+}
+
+
+async function run() {
+    let employeeArray = [];
+    const maxTimes = 4;
+    for (i = 0; i < maxTimes; i++) {
+        const promise = new Promise((resolve, reject) => {
+            runInquirer()
+                .then(function ({ name, id, email, title }) {
+
+                    if (title === "Manager") {
+                        runInquirerManager().then(function ({ officeNumber }) {
+                            this.employee = new Manager(name, id, email, officeNumber, title);
+                            console.log(officeNumber);
+                            employeeArray.push(employee);
+                            resolve("done");
+                        });
+
+                    } else if (title === "Engineer") {
+                        runInquirerEngineer().then(function ({ github }) {
+                            this.employee = new Engineer(name, id, email, github, title);
+                            console.log(github);
+                            employeeArray.push(employee);
+                            resolve("done");
+                        });
+                    } else if (title === "Intern") {
+                        runInquirerIntern().then(function ({ school }) {
+                            this.employee = new Intern(name, id, email, school, title);
+                            console.log(school);
+                            employeeArray.push(employee);
+                            resolve("done");
+                        });
+                    }
+
+                }).catch(function (err) {
+                    console.log("There was an error.");
+                    console.log(err);
+                });
         });
-    });
-}
 
-function startHtml() {
-    const html = `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="X-UA-Compatible" content="ie=edge">
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-        <title>Team Profile</title>
-    </head>
-    <body>
-        <nav class="navbar navbar-dark bg-dark mb-5">
-            <span class="navbar-brand mb-0 h1 w-100 text-center">Team Profile</span>
-        </nav>
-        <div class="container">
-            <div class="row">`;
-    fs.writeFile("./output/team.html", html, function(err) {
-        if (err) {
-            console.log(err);
-        }
-    });
-    console.log("start");
-}
-
-function addHtml(member) {
-    return new Promise(function(resolve, reject) {
-        const name = member.getName();
-        const role = member.getRole();
-        const id = member.getId();
-        const email = member.getEmail();
-        let data = "";
-        if (role === "Engineer") {
-            const gitHub = member.getGithub();
-            data = `<div class="col-6">
-            <div class="card mx-auto mb-3" style="width: 18rem">
-            <h5 class="card-header">${name}<br /><br />Engineer</h5>
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item">ID: ${id}</li>
-                <li class="list-group-item">Email Address: ${email}</li>
-                <li class="list-group-item">GitHub: ${gitHub}</li>
-            </ul>
-            </div>
-        </div>`;
-    } else if (role === "Intern") {
-        const school = member.getSchool();
-        data = `<div class="col-6">
-        <div class="card mx-auto mb-3" style="width: 18rem">
-        <h5 class="card-header">${name}<br /><br />Intern</h5>
-        <ul class="list-group list-group-flush">
-            <li class="list-group-item">ID: ${id}</li>
-            <li class="list-group-item">Email Address: ${email}</li>
-            <li class="list-group-item">School: ${school}</li>
-        </ul>
-        </div>
-    </div>`;
-    } else {
-        const officePhone = member.getOfficeNumber();
-        data = `<div class="col-6">
-        <div class="card mx-auto mb-3" style="width: 18rem">
-        <h5 class="card-header">${name}<br /><br />Manager</h5>
-        <ul class="list-group list-group-flush">
-            <li class="list-group-item">ID: ${id}</li>
-            <li class="list-group-item">Email Address: ${email}</li>
-            <li class="list-group-item">Office Phone: ${officePhone}</li>
-        </ul>
-        </div>
-    </div>`
+        const result = await promise;
+        console.log(result);
     }
-    console.log("adding team member");
-    fs.appendFile("./output/team.html", data, function (err) {
-        if (err) {
-            return reject(err);
-        };
-        return resolve();
+
+    // console.log(employeeArray.length);
+
+    function displayTitle(employee) {
+        if (employee.title === "Manager") {
+            console.log(employee.officeNumber);
+            return `office number: ${employee.officeNumber}`;
+        }
+
+        if (employee.title === "Intern") {
+            return `school: ${employee.school}`;
+        }
+
+        if (employee.title === "Engineer") {
+            return `gitHub: ${employee.github}`;
+        }
+
+    }
+    function getCardHtml() {
+        let html = "";
+        for (j = 0; j < maxTimes; j++) {
+            console.log(employeeArray[j])
+            html += `<div class="card bg-dark justify-content-center align-items-center" style="width: 18rem;">
+                <div class="col card-header">
+                    <h4>${employeeArray[j].name}</h4>
+                </div>
+                <div class="col card-header">
+                    <h4>${employeeArray[j].title}</h4 >
+                </div >
+                <ul class="list-group list-group-flush text">
+                    <li class="list-group-item">ID: ${employeeArray[j].id}</li>
+                    <li class="list-group-item">Email: ${employeeArray[j].email}</li>
+                    <li class="list-group-item"> ${displayTitle(employeeArray[j])}</li>
+                </ul>
+            </div > `;
+        }
+        return html;
+    }
+
+
+
+    let html = `< !DOCTYPE html >
+                <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                <meta http-equiv="X-UA-Compatible" content="ie=edge">
+                                    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+                                        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+                                        <title>Document</title>
+                                        <style>
+                                            .row {
+                                                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                margin-top: 20px;
+                margin-bottom: 20px;
+            }
+            .card {
+                                                padding: 15px;
+                border-radius: 6px;
+                background-color: white;
+                color: lightskyblue;
+                margin: 15px;
+            }
+            .text {
+                                                padding: 15px;
+                border-radius: 6px;
+                background-color: lightskyblue;
+                color: black;
+                margin: 15px;
+            }
+            .col {
+                                                flex: 1;
+                text-align: center;
+            }
+        </style>
+    </head>
+                                    <body>
+                                        <nav class="navbar navbar-dark bg-dark justify-content-center align-items-center">
+                                            <span class="navbar-brand mb-0 h1">
+                                                <h1>My Team</h1>
+                                            </span>
+                                        </nav>
+                                        <div class="row">
+                                            ${getCardHtml()}
+                                        </div>
+                                    </body>
+    
+    </html>
+    `;
+
+
+
+
+    console.log(html);
+    const fs = require("fs");
+    fs.writeFile('newfile.html', html, function (err) {
+        if (err) throw err;
+        console.log('File is created successfully.');
     });
-});
-
 }
-
-function finishHtml() {
-const html = ` </div>
-</div>
-
-</body>
-</html>`;
-
-fs.appendFile("./output/team.html", html, function (err) {
-    if (err) {
-        console.log(err);
-    };
-});
-console.log("end");
-}
-
-initApp();
+run()
